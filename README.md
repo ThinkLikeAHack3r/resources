@@ -2,84 +2,169 @@
 
 Free methodology references for people learning hacking, HackTheBox, TryHackMe, Capture The Flag labs, and practical penetration testing.
 
-These resources are designed to help beginners move beyond tutorial-following and develop independent black-box reasoning. The goal is not to provide shortcuts or walkthrough answers. The goal is to help you understand what your recon output means, what it implies about the target, and what to test next.
+These resources are designed to help beginners move beyond tutorial-following and develop independent black-box reasoning. The goal is not to provide walkthrough answers. The goal is to help you follow a repeatable testing process, recognize what each stage is asking, and verify your reasoning.
 
 > **Core principle:** The data is the hint.
 
-Every port, banner, endpoint, error message, redirect, header, permission, service response, file path, credential, and command output is evidence. These resources are meant to help you read that evidence instead of waiting for a walkthrough to tell you what to do.
+---
+
+## Resource Stack
+
+Use these in order.
+
+### 1. Port & Service Glossary
+
+- [Read online](./port-service-glossary.md)
+
+Reference guide for common ports, services, protocols, and their pentesting significance.
+
+Use this when you need to understand what a port or service is.
+
+**Question it answers:**
+
+```text
+What is this service, and why does it matter?
+```
 
 ---
 
-## Resources
+### 2. Pentest Reasoning Framework
 
-### Port Enumeration Glossary
+- [Read online](./pentest-reasoning-framework.md)
+- [Quick reference](./pentest-reasoning-framework-quick-reference.md)
 
-- [Read online](./port-enumeration-glossary.md)
+The core stepwise methodology for working through an unguided box or authorized test.
 
-A quick-reference guide for common ports, exposed services, pentesting significance, first enumeration moves, and common false assumptions.
+It teaches the repeating sequence:
 
-Use this when you run an initial scan and need to understand what a port or service may imply.
+```text
+Starting Data
+→ Discovery
+→ Service Interpretation
+→ Access Hypothesis
+→ Initial Foothold
+→ Local Enumeration
+→ Privilege Escalation
+→ Objective Verification
+→ Debrief
+```
 
----
-
-### Pentesting Decision Framework
-
-- [Read online](./pentesting-decision-framework.md)
-- [Quick cheatsheet](./pentesting-decision-framework-cheatsheet.md)
-- [Download PDF](./downloads/pentesting-decision-framework.pdf)
-
-A practical framework for reasoning through identity, authentication, access, trust, privilege, and secrets across networks, web apps, Linux, Active Directory, cloud, and containers.
-
-Use this when you are stuck and need to classify what kind of system you are touching, what evidence you already have, and what question to answer next.
-
----
-
-### Attack Thesis Construction Template
-
-- [Read online](./attack-thesis-construction-template.md)
-
-A structured template for turning enumeration output into an attack thesis. Use it after initial recon to explain command syntax, interpret service output, classify the target, identify viable attack surfaces, track unknowns, and choose the next logical test.
-
-This template is designed to prevent random tool-chaining. It forces every action to connect back to observed evidence.
-
----
-
-## How to Use These Resources
-
-Use the resources in this order during a beginner or intermediate lab:
-
-1. **Run initial enumeration**
-   - Identify open ports, exposed services, banners, protocols, and reachable application surfaces.
-
-2. **Use the Port Enumeration Glossary**
-   - Translate open ports and service names into practical meaning.
-   - Ask what each service enables.
-   - Identify the most promising surfaces.
-
-3. **Use the Pentesting Decision Framework**
-   - Classify the system.
-   - Think through identity, authentication, access, trust, privilege, and secrets.
-   - Decide what question needs to be answered next.
-
-4. **Use the Attack Thesis Construction Template**
-   - Convert observations into a structured thesis.
-   - Explain why each command or test is being used.
-   - Track unknowns.
-   - Choose the next logical action.
-
-The goal is to build a repeatable thinking process, not a memorized sequence of tools.
-
----
-
-## Methodology
-
-The resources are built around this recurring pattern:
+The quick reference is the one-page memory anchor for the framework:
 
 ```text
 IDENTITY → AUTH → ACCESS → TRUST → PRIVILEGE → SECRETS
 ```
 
-Ask these questions repeatedly:
+Use the full framework as the operating process. Use the quick reference while actively working through a target.
+
+**Question it answers:**
+
+```text
+Where am I in the engagement, and what question should I answer next?
+```
+
+---
+
+### 3. AI Process Auditor Prompt
+
+- [Read online](./ai-process-auditor-prompt.md)
+
+A prompt for using an AI assistant to audit your process after you have already done the reasoning.
+
+Use this to check assumptions, identify missing evidence, validate whether your next action follows from your data, and catch skipped stages.
+
+Do not use it to outsource the thinking. Use it to audit the thinking.
+
+**Question it answers:**
+
+```text
+What am I assuming that the evidence does not prove?
+```
+
+---
+
+## Recommended Workflow
+
+```text
+Scan
+→ Port & Service Glossary
+→ Pentest Reasoning Framework
+→ Pentest Reasoning Framework Quick Reference
+→ Optional AI Process Auditor
+```
+
+In practice:
+
+1. **Start with limited data**
+   - Usually an IP address, hostname, URL, or credentials.
+   - Ask what discovery would reveal the most useful next information.
+
+2. **Perform discovery**
+   - Identify open ports, services, banners, versions, and reachable surfaces.
+
+3. **Interpret the output**
+   - Ask what the services imply.
+   - Ask whether services are related.
+   - Ask whether version information exists.
+   - Ask whether known vulnerabilities are relevant.
+   - Ask what can be checked safely before exploitation.
+
+4. **Use the quick reference**
+   - Route your evidence into the right reasoning category:
+     - Identity
+     - Authentication
+     - Access
+     - Trust
+     - Privilege
+     - Secrets
+
+5. **Build an access hypothesis**
+   - Choose the most evidence-supported path.
+   - Do not attack every port equally.
+
+6. **Obtain and verify initial foothold**
+   - Identify who you are, where you are, what operating system you are on, and what access you actually have.
+
+7. **Enumerate locally**
+   - Ask what privileges you have, what groups you are in, what files are accessible, and whether privilege escalation is needed.
+
+8. **Escalate only when evidence supports it**
+   - Validate the condition that enables privilege escalation.
+   - Execute the minimum necessary action in authorized labs.
+
+9. **Verify the objective**
+   - Confirm whether the target files, flags, or proof threshold are accessible.
+
+10. **Debrief**
+   - Identify what pattern worked, what failed, what tools mattered, and what you should recognize faster next time.
+
+---
+
+## Methodology Anchor
+
+The framework is built around two nested structures.
+
+### Execution sequence
+
+```text
+Starting Data
+→ Discovery
+→ Interpretation
+→ Hypothesis
+→ Foothold
+→ Enumeration
+→ Escalation
+→ Objective
+→ Debrief
+```
+
+### System reasoning loop
+
+```text
+IDENTITY → AUTH → ACCESS → TRUST → PRIVILEGE → SECRETS
+```
+
+Ask these repeatedly:
 
 | Stage | Core Question |
 |---|---|
@@ -90,8 +175,6 @@ Ask these questions repeatedly:
 | Privilege | Where can access become higher-impact access? |
 | Secrets | Where would credentials, tokens, keys, hashes, configs, or sensitive data live? |
 
-If you are lost, return to the evidence.
-
 ---
 
 ## Episode 1 Companion
@@ -100,7 +183,7 @@ These resources support the ThinkLikeAHack3r Episode 1 methodology:
 
 **How to Learn Hacking: Escape the Tutorial Trap**
 
-The episode argues that tutorials often teach steps, not decision-making. These documents are intended to help close that gap by giving you a practical reasoning structure for unguided boxes and black-box-style labs.
+The episode argues that tutorials often teach steps, not decision-making. These documents are intended to help close that gap by giving you a repeatable reasoning structure for unguided boxes and black-box-style labs.
 
 ---
 
@@ -124,30 +207,7 @@ These materials are for education, authorized security testing, and defensive sk
 
 Do not use these resources against systems you do not own or do not have explicit permission to test.
 
----
-
-## Contributing
-
-Corrections and improvements are welcome.
-
-Good contributions include:
-
-- Clarifying confusing explanations
-- Adding missing port/service context
-- Improving beginner readability
-- Fixing inaccurate tool descriptions
-- Adding safer methodology notes
-- Improving examples without turning them into walkthrough spoilers
-
-Please keep the focus on reasoning, evidence, and methodology.
-
----
-
-## License
-
-This repository is intended to be freely accessible for learning.
-
-See the repository license for reuse terms.
+Do not paste real client secrets, private keys, tokens, passwords, or confidential data into public AI tools.
 
 ---
 
