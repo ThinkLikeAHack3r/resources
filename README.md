@@ -12,7 +12,7 @@ These resources are designed to help beginners move beyond tutorial-following an
 - **Attack Thesis Template**  
   A structured reasoning template for converting observations into testable hypotheses during an engagement.
 
-- **HTB / CTF Methodology Notes**  
+- **Pentesting Decision Framework**  
   Supporting notes for applying OSINT, threat modeling, vulnerability analysis, exploitation, and post-exploitation in beginner-friendly challenge environments.
 
 ## Core Principle
