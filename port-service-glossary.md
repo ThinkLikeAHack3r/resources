@@ -88,8 +88,9 @@
 13. Infrastructure and Network Services
 	1. 53 DNS: Domain Name Service
 	2. 69 TFTP: Trivial File Transfer Protocol
-	3. 179 BGP: Border Gateway Protocol
-	4. 1900 SSDP: Simple Service Discovery Protocol
+	3. 111 RPCbind: Remote Procedure Call Bind Service
+	4. 179 BGP: Border Gateway Protocol
+	5. 1900 SSDP: Simple Service Discovery Protocol
 14. Network Monitoring and Management
 	1. 161 SNMP: Simple Network Management Protocol  
 	2. 162 SNMP Trap: Simple Network Management Protocol Trap Service
@@ -15442,6 +15443,243 @@ Authenticated access provides remote system interaction, such as remote login, f
 Once access is established, the attacker performs privilege escalation techniques such as credential dumping, privilege escalation exploits, or domain enumeration to obtain administrative control of the system or network.
 
 DNS typically contributes to compromise by enabling network infrastructure discovery, which attackers leverage to identify valuable systems and services that can be targeted for authentication attacks, exploitation, or lateral movement within the environment.
+
+## Port 111 — RPCbind: Remote Procedure Call Bind Service
+
+RPCbind is the Remote Procedure Call Bind service, historically known as portmapper. It supports Open Network Computing Remote Procedure Call, which allows a program on one computer to request that a procedure be executed by a service on another computer. Because many Remote Procedure Call services use dynamically assigned ports, clients need a reliable method to discover where each service is listening. RPCbind solves this problem by listening on TCP and UDP port 111 and maintaining mappings between Remote Procedure Call program numbers, supported versions, transport protocols, and network addresses. When a Remote Procedure Call service starts, it registers its program information and listening address with rpcbind. A client then queries rpcbind before connecting directly to the discovered service endpoint. RPCbind commonly appears on Unix-like systems, including Linux, Berkeley Software Distribution systems, Solaris systems, storage appliances, and servers using Network File System or other legacy Remote Procedure Call applications.
+
+RPCbind is normally deployed as foundational internal infrastructure rather than as a user-facing application. It commonly supports services such as the Network File System daemon, the Network File System mount daemon, the Network Lock Manager, the Network Status Monitor, remote quota services, Network Information Service components, and vendor-specific Remote Procedure Call applications. Some of these services listen on fixed ports, while others register dynamically assigned ports with rpcbind. RPCbind itself primarily exposes service-location metadata rather than application files or user records, but the services it identifies may expose sensitive data or privileged functionality. The mapping operation usually does not require user authentication, although the downstream Remote Procedure Call service may enforce host-based access controls, Unix user and group identifiers, Kerberos authentication, or application-specific authorization. Port 111 should normally be restricted to trusted internal networks, but it is sometimes exposed externally because of incomplete firewall rules, legacy server configurations, or improperly secured storage systems.
+
+RPCbind matters during penetration testing because it acts as a directory of additional Remote Procedure Call services that may not have been identified correctly during the initial port scan. When port 111 is discovered, testers immediately enumerate the registered program numbers, program names, versions, transport protocols, and dynamically assigned ports. They look specifically for Network File System, mountd, nlockmgr, status, rquotad, Network Information Service, and obsolete Remote Procedure Call daemons. The tester then investigates whether Network File System exports can be listed, whether exported directories are readable or writable, whether access controls trust broad networks or spoofable client identities, and whether any registered Remote Procedure Call service is outdated or vulnerable. RPCbind rarely provides direct system access by itself, but it can disclose the precise endpoints that lead to file access, configuration disclosure, authentication material, legacy-service exploitation, or lateral movement.
+
+### Layer 1 — Immediate Recognition (Service Identity)
+
+111 → RPCBIND → RPC SERVICE MAPPING AND DOWNSTREAM UNIX RPC ATTACK SURFACE
+
+• Port 111 commonly identifies rpcbind or the older portmapper implementation. Its function is to map Remote Procedure Call program numbers and versions to the network addresses and ports on which the corresponding services are listening.
+
+• The service handles registration and discovery metadata, including Remote Procedure Call program numbers, service versions, transport protocols, port numbers, and universal network addresses.
+
+• The mapping information is normally intended for internal systems. Direct exposure to the internet is generally unnecessary and may disclose internal service information.
+
+• Authentication is usually not expected for basic mapping queries. Authentication and authorization are normally handled by the downstream service identified through rpcbind.
+
+What patterns are recognized here?
+
+The immediate pattern is a Unix-like server, storage platform, or legacy infrastructure component using Open Network Computing Remote Procedure Call. Port 111 frequently appears alongside port 2049 for Network File System, but the tester should not assume that Network File System is present until the registered programs are enumerated. The service may instead expose monitoring daemons, quota services, Network Information Service components, lock-management services, or vendor-specific Remote Procedure Call programs.
+
+When a tester sees this port in an **Nmap scan**, what do they instantly know about the **class of system component** they are dealing with?
+
+The tester knows that the target probably runs Unix-like infrastructure containing one or more Remote Procedure Call services. Port 111 is not usually the final application endpoint. It is a discovery mechanism that can reveal additional services, versions, transports, and dynamically assigned ports that must be investigated separately.
+
+### Layer 2 — Operational Understanding (How the Service Works)
+
+Professional testers also understand **how the protocol behaves** and what normal configurations look like.
+
+They typically know:
+
+• RPCbind accepts queries over TCP or UDP, with both transports commonly available on port 111.
+
+• A Remote Procedure Call server registers its program number, supported version, transport, and listening address with rpcbind when the service starts.
+
+• A client contacts rpcbind using the desired program number and version. RPCbind returns the registered endpoint, after which the client communicates directly with the downstream service.
+
+• Basic rpcbind enumeration generally does not require authentication. The discovered service is responsible for enforcing its own access controls.
+
+• Rpcbind is commonly found on Linux, Berkeley Software Distribution, Solaris, Unix-based storage appliances, virtualization infrastructure, and systems providing Network File System services.
+
+• A normal secure configuration restricts port 111 and the associated Remote Procedure Call service ports to trusted management or internal networks.
+
+• Legacy portmapper version 2 focuses primarily on TCP and UDP port mappings, while newer rpcbind versions support transport-independent universal addresses.
+
+Typical enumeration tools with practical syntax examples and flags for each related to the port. The syntax must match the ideal implementation of the tool.
+
+Nmap
+
+`sudo nmap -sS -sU -p T:111,U:111 -sV --script=rpcinfo target`
+
+The `-sS` option performs a TCP SYN scan, while `-sU` performs a UDP scan. The `-p T:111,U:111` argument explicitly tests TCP and UDP port 111. The `-sV` option performs service and version detection. The `--script=rpcinfo` option queries rpcbind and reports registered program numbers, versions, protocols, ports, and service names. Testing both transports matters because the TCP and UDP registration lists may not be identical.
+
+rpcinfo
+
+`rpcinfo -s target`
+
+`rpcinfo -p target`
+
+The `-s` option requests a concise list of the Remote Procedure Call programs registered with rpcbind, including their versions, transports, service names, and owners when available. The `-p` option queries the older version 2 portmapper protocol and prints registered program numbers, versions, protocols, ports, and service names. The `-s` command should generally be attempted first, while `-p` remains useful for older implementations and familiar portmapper-style output.
+
+showmount
+
+`showmount -e target`
+
+`showmount -a target`
+
+The `-e` option asks the target's Network File System mount daemon to display its export list and the clients or networks permitted to access each export. The `-a` option requests a list of recorded client and mounted-directory combinations. These commands should be used when rpcinfo reveals mountd or Network File System services. The results from `showmount -a` may contain stale or incomplete records, and a Network File System version 4-only server may not expose the separate MOUNT protocol required by showmount.
+
+Metasploit Framework NFS Mount Scanner
+
+`msfconsole -q`
+
+`use auxiliary/scanner/nfs/nfsmount`
+
+`set RHOSTS target`
+
+`run`
+
+The `-q` option starts Metasploit Framework without the startup banner. The `use` command loads the Network File System mount scanner. The `set RHOSTS target` command defines the authorized target, and `run` begins the scan. This module should be used when rpcbind enumeration identifies Network File System or mountd because it examines available Network File System mounts and their permissions.
+
+### Layer 3 — Exploitation Awareness (Common Attack Patterns)
+
+What are typical vulnerability classes associated with the services on this port?
+
+The first vulnerability class is unrestricted Remote Procedure Call service enumeration. The tester queries rpcbind, retrieves the registered program table, identifies dynamically assigned service ports, scans those ports directly, fingerprints each service, and then evaluates the newly discovered attack surfaces. The exposure is primarily an information-disclosure issue, but it can reveal services that were missed by a conventional scan or hidden behind nonstandard ports.
+
+The second vulnerability class is exposed Network File System infrastructure. The tester identifies the Network File System and mountd program numbers, determines their listening ports, requests the export list, and reviews the allowed clients or networks. Broad entries, wildcard access, weak subnet restrictions, or publicly accessible exports may allow the tester to mount or query directories. Readable exports may expose source code, configuration files, user home directories, Secure Shell keys, backups, password hashes, database credentials, or application secrets.
+
+The third vulnerability class is writable Network File System exports. The tester discovers an accessible export, determines whether it permits write operations, identifies the server's handling of Unix user and group identifiers, and tests whether files can be created or modified under an authorized test account. A writable export containing application files, scheduled scripts, user home directories, web roots, or administrative configuration may provide a path to command execution or credential compromise.
+
+The fourth vulnerability class is unsafe identity mapping or disabled root squashing. Traditional Network File System authentication may trust user and group identifiers supplied by the client. Root squashing normally maps client user identifier zero to an unprivileged anonymous identity. When an export uses `no_root_squash`, a root process on an authorized client may retain root-level ownership when accessing the export. If the exported directory contains security-sensitive files or executable content, the progression may move from export access to privileged file modification and then to code execution on the server.
+
+The fifth vulnerability class is an outdated downstream Remote Procedure Call service. The tester records the program number, program name, supported version, operating-system indicators, and listening port. The tester then compares the identified implementation with known vulnerabilities, validates applicability without disrupting the system, and tests the affected procedure only when authorized. Successful exploitation may provide denial of service, information disclosure, authentication bypass, memory corruption, or command execution under the downstream service account.
+
+The sixth vulnerability class is improper Remote Procedure Call registration control. Secure rpcbind implementations normally restrict service registration and removal requests to the local loopback interface. An insecure configuration that accepts remote SET or UNSET requests may permit unauthorized manipulation of registered service mappings. The progression begins with testing registration behavior, determining whether remote changes are accepted, and evaluating whether a legitimate service can be redirected, removed, or impersonated.
+
+What are is the logical progression of each vulnerability class from start to finish?
+
+The general progression is rpcbind discovery, registered-program enumeration, dynamic-port identification, downstream-service fingerprinting, configuration testing, access validation, sensitive-data discovery, credential or file analysis, authentication to another service, command execution, and privilege escalation.
+
+### Layer 4 — Attack Chain Context (Where This Service Fits in Compromise Paths)
+
+When analyzing this service, answer the following questions:
+
+• Could this service realistically provide **initial access** to the system or network?
+
+Rpcbind itself rarely provides direct initial access. However, it can reveal a vulnerable Remote Procedure Call daemon or an exposed Network File System export that provides the actual initial-access path.
+
+• Could the service expose **sensitive information** such as usernames, credentials, configuration files, logs, or system details?
+
+Rpcbind directly exposes service names, program numbers, supported versions, protocols, and listening ports. The downstream services it identifies may expose files, usernames, home directories, configuration data, backups, credentials, logs, or system information.
+
+• Does the service act as an **authentication gateway** that validates credentials or connects to identity infrastructure such as LDAP, Kerberos, or OAuth?
+
+Rpcbind is not normally an authentication gateway. It directs clients to Remote Procedure Call services but does not usually validate user credentials. A downstream service may use Unix identity information, host-based restrictions, Kerberos, or another authentication mechanism.
+
+• Does the service store or expose **valuable data** such as application databases, documents, or configuration information?
+
+Rpcbind does not normally store application data. However, it may reveal Network File System services that expose valuable files, backups, source code, documents, databases, or configuration directories.
+
+• Does the service run with **elevated privileges** or interact with trusted components that could allow privilege escalation?
+
+Rpcbind must initially bind to a privileged port and commonly interacts with system-level Remote Procedure Call daemons. The primary privilege-escalation risk normally exists in a downstream privileged service or in a sensitive Network File System export rather than in rpcbind's mapping function itself.
+
+• Could authenticated access to this service enable **lateral movement** to other systems or services?
+
+Rpcbind does not normally provide an authenticated session. Information or file access obtained through a discovered service may reveal credentials, trusted host relationships, internal hostnames, mount configurations, or Secure Shell keys that enable lateral movement.
+
+Based on these answers:
+
+• What **role does this service most likely play** in a potential attack chain?
+
+Rpcbind most commonly functions as an **information discovery point** and an **attack-surface expansion mechanism**. When it reveals accessible Network File System resources or vulnerable Remote Procedure Call applications, it may also facilitate an **initial access vector**, **data access system**, **credential harvesting opportunity**, **privilege escalation vector**, or **lateral movement channel**.
+
+### Layer 5 — Enumeration Priority (How Quickly It Should Be Investigated)
+
+When this port is discovered during scanning, answer the following:
+
+• Does this service commonly expose **direct attack surfaces** such as web applications, remote shells, authentication systems, or databases?
+
+Rpcbind does not normally expose a remote shell, web application, or database directly. It exposes the locations of downstream Remote Procedure Call services that may contain direct attack surfaces.
+
+• Does the service commonly contain **user input processing or authentication logic**?
+
+Rpcbind processes structured Remote Procedure Call requests but does not normally contain user-facing authentication logic. Downstream services may process complex requests or perform access-control decisions.
+
+• Could this service realistically expose **configuration weaknesses or sensitive data**?
+
+Yes. It can disclose the target's registered Remote Procedure Call programs, supported versions, transports, and dynamically assigned ports. It can also lead directly to Network File System export enumeration and sensitive file access.
+
+• Is the service typically **externally exposed** or primarily internal infrastructure?
+
+Rpcbind is primarily internal infrastructure. External exposure should be treated as suspicious because most internet users do not require access to a server's Remote Procedure Call mappings.
+
+• How frequently does this service appear in **real-world compromises or CTF environments**?
+
+Rpcbind is common on Unix-like servers and storage systems but is less frequently a direct compromise vector than Secure Shell, web applications, or Server Message Block. It appears regularly in penetration-testing labs and capture-the-flag environments because exposed Network File System exports can provide clear paths to files, credentials, or privileged access.
+
+Based on the answers above:
+
+• Should this port be classified as **high priority**, **medium priority**, or **low priority** during enumeration?
+
+Port 111 should be classified as **medium priority** during initial enumeration. The service normally provides discovery information rather than direct execution, but it can rapidly become **high priority** when it reveals Network File System, mountd, an unusual legacy Remote Procedure Call program, a vulnerable service version, or an externally accessible dynamic endpoint. It should be enumerated early because a single rpcbind query can substantially expand the known attack surface with minimal effort.
+
+### Layer 6 — Initial Hypothesis Formation (Pentester Reasoning Model)
+
+When this port appears in a scan result, answer the following questions to form an attack hypothesis.
+
+Observation
+
+• What service is running on this port?
+
+The target is probably running rpcbind or a compatible portmapper service over TCP, UDP, or both transports.
+
+• What system component does this likely represent?
+
+The component is a Unix-like Remote Procedure Call service registry. It may support Network File System infrastructure, system-monitoring daemons, quota services, Network Information Service, lock management, or a vendor-specific Remote Procedure Call application.
+
+Hypothesis
+
+• What **types of weaknesses or misconfigurations** commonly occur in this service?
+
+The target may allow anonymous Remote Procedure Call program enumeration, expose unnecessary services, reveal dynamically assigned ports, provide broad Network File System exports, permit writable shares, trust weak client-address restrictions, use unsafe Unix identifier mapping, disable root squashing, or run an outdated downstream Remote Procedure Call daemon.
+
+• What **sensitive information** might the service expose?
+
+Rpcbind may expose program names, program numbers, versions, transports, owners, and listening ports. Associated services may expose export paths, allowed networks, client mount records, usernames, home directories, configuration files, backups, source code, Secure Shell keys, password hashes, database credentials, and internal hostnames.
+
+• Could the service lead to **credentials, data access, or command execution**?
+
+Yes. Network File System exports may disclose credentials or sensitive files. Writable exports may permit modification of application content, user files, scripts, or configuration. An outdated Remote Procedure Call service may also contain a vulnerability that permits command execution.
+
+Test
+
+• What **specific enumeration actions or tools** should be used first to test the hypothesis?
+
+The tester should scan TCP and UDP port 111, run Nmap service detection with the `rpcinfo` script, query the target with `rpcinfo -s` and `rpcinfo -p`, record every registered service and dynamic port, scan those ports directly, and use `showmount -e` when mountd or Network File System is identified. Network File System-specific Nmap scripts or the Metasploit Network File System mount scanner can then be used to examine exports and permissions.
+
+Interpretation
+
+• What results would indicate that the service is **misconfigured or vulnerable**?
+
+Suspicious results include rpcbind exposed to the public internet, unnecessary legacy Remote Procedure Call programs, obsolete service versions, Remote Procedure Call services bound to every network interface, remotely accepted registration changes, Network File System exports accessible to all clients, exports covering `/`, `/home`, `/etc`, `/var`, web roots, backup directories, or application directories, writable exports, broad network ranges, weak host-based restrictions, and exports configured with `no_root_squash`.
+
+Next Hypothesis
+
+• If useful information is discovered such as credentials, usernames, configuration files, or internal hostnames, **which other services discovered during scanning should be tested next**?
+
+Port 2049 Network File System should be tested first when Network File System is registered. Port 22 Secure Shell should be tested with discovered usernames, private keys, or authorized-key information. Ports 80, 443, 8080, and 8443 should be examined when exported files reveal web applications or credentials. Port 445 Server Message Block and port 873 rsync should be checked for related file shares or backups. Ports 389 and 636 should be investigated if configuration files reveal Lightweight Directory Access Protocol infrastructure. Any dynamically assigned ports returned by rpcbind must also be scanned and fingerprinted directly.
+
+### Final Pentester Reasoning Question
+
+The most likely path from this service to system compromise is:
+
+RPCbind service discovered on port 111
+
+1. The tester interacts with the service using _protocol-specific enumeration tools or methods_ such as **rpcinfo**, **Nmap's rpcinfo script**, **showmount**, or the **Metasploit Network File System mount scanner**.
+    
+2. The service reveals _registered Remote Procedure Call programs, supported versions, transport protocols, dynamically assigned ports, and downstream services_ such as _Network File System, mountd, nlockmgr, status, rquotad, or legacy Remote Procedure Call applications_.
+    
+3. This information or access enables _downstream service enumeration_ such as _Network File System export listing, file retrieval, permission analysis, Unix identifier testing, configuration analysis, or version-specific vulnerability research_.
+    
+4. The attacker then uses the discovered information or access to interact with other services identified during scanning, such as _port 2049 Network File System, port 22 Secure Shell, port 445 Server Message Block, port 873 rsync, or web services on ports 80, 443, 8080, and 8443_.
+    
+5. A misconfiguration, weak credential, exposed resource, or exploitable feature allows successful authentication, unauthorized access, or command execution through one of these services.
+    
+6. Authenticated access provides _remote system interaction_, such as _Secure Shell login, Network File System access, file-system modification, application execution, or access to an administrative service_.
+    
+7. Once access is established, the attacker performs _relevant privilege escalation techniques_, such as _abusing a writable privileged script, modifying a scheduled task, recovering reusable credentials, exploiting an unsafe `no_root_squash` export, abusing set-user-ID executables, or exploiting a vulnerable local service_, to obtain administrative control of the system or network.
+    
+
+RPCbind typically contributes to compromise by enabling **Remote Procedure Call service discovery and downstream attack-surface identification**, which attackers leverage to progress toward file access, credential discovery, authentication, execution, or privilege escalation through other services in the environment.
 
 ## Port 123 — NTP: Network Time Protocol
 
